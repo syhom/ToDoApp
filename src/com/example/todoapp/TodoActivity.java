@@ -1,10 +1,7 @@
 package com.example.todoapp;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
-
-import org.apache.commons.io.FileUtils;
+import java.util.List;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -18,11 +15,13 @@ import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
-import android.widget.Toast;
+
+import com.activeandroid.query.Delete;
+import com.activeandroid.query.Update;
 
 public class TodoActivity extends Activity {
-	private ArrayList<String> todoItems;
-	private ArrayAdapter<String> todoAdapter;
+	private ArrayList<Item> todoItems;
+	private ArrayAdapter<Item> todoAdapter;
 	private ListView lvItems;
 	private EditText etNewItem;
 	private final int REQUEST_CODE = 20;
@@ -45,9 +44,12 @@ public class TodoActivity extends Activity {
 
 			@Override
 			public boolean onItemLongClick(AdapterView<?> adapter, View item, int pos, long id) {
+				Item selectedItem = todoItems.get(pos);
+				System.out.println("Delete task: " + selectedItem.task + "with id " + selectedItem.remoteId);
 				todoItems.remove(pos);
 				todoAdapter.notifyDataSetChanged();
-				writeItems();
+				// writeItems();
+				deleteItem(selectedItem);
 				return true;
 			}
 		});
@@ -56,7 +58,7 @@ public class TodoActivity extends Activity {
 
 			@Override
 			public void onItemClick(AdapterView<?> adapter, View item, int pos, long id) {
-				String selectedItem = todoItems.get(pos);
+				Item selectedItem = todoItems.get(pos);
 				Intent intent = new Intent(TodoActivity.this, EditItemActivity.class);
 				intent.putExtra("selected_item", selectedItem);
 				intent.putExtra("position", pos);
@@ -69,9 +71,10 @@ public class TodoActivity extends Activity {
 	public void onAddedItem(View v) {
 		String itemText = etNewItem.getText().toString();
 		if (itemText.length() != 0) {
-			todoAdapter.add(itemText);	
+	
 			etNewItem.setText("");
-			writeItems();
+			// writeItems();
+			saveItem(itemText);
 		}
 	}
 	
@@ -82,7 +85,8 @@ public class TodoActivity extends Activity {
 		if (resultCode == RESULT_OK && requestCode == REQUEST_CODE) {
 
 			// Extract item and position from result extras
-			String newItem = data.getExtras().getString("edited_item");			
+		//	String newItem = data.getExtras().getString("edited_item");
+			Item newItem = (Item) data.getExtras().getSerializable("edited_item");
 			int position = data.getExtras().getInt("item_position");
 			
 			// Update todoItems ArrayList
@@ -92,7 +96,8 @@ public class TodoActivity extends Activity {
 			todoAdapter.notifyDataSetChanged();
 			
 			// Save change to file
-			writeItems();
+			//writeItems();
+			updateItem(newItem);
 		}
 	} 
 	
@@ -116,26 +121,61 @@ public class TodoActivity extends Activity {
 		return super.onOptionsItemSelected(item);
 	}
 
-	// Read the list of items in the todo.txt and store in the todoItems ArrayList
+//	// Read the list of items in the todo.txt and store in the todoItems ArrayList
+//	private void readItems() {
+//		File filesDir = getFilesDir();
+//		File todoFile = new File(filesDir, "todo.txt");
+//		try {
+//			todoItems = new ArrayList<String>(FileUtils.readLines(todoFile));
+//		} catch (IOException e) {
+//			todoItems = new ArrayList<String>();
+//			e.printStackTrace();
+//		}
+//	}
+//	
+//	// Save changes to the todo.txt file
+//	private void writeItems() {
+//		File filesDir = getFilesDir();
+//		File todoFile = new File(filesDir, "todo.txt");
+//		try {
+//			FileUtils.writeLines(todoFile, todoItems);
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		}
+//	}
+	
 	private void readItems() {
-		File filesDir = getFilesDir();
-		File todoFile = new File(filesDir, "todo.txt");
-		try {
-			todoItems = new ArrayList<String>(FileUtils.readLines(todoFile));
-		} catch (IOException e) {
-			todoItems = new ArrayList<String>();
-			e.printStackTrace();
+		todoItems = new ArrayList<Item>();
+		List<Item> itemList = Item.getAll();
+		Item item;
+		for (int i = 0; i < itemList.size(); i++) {
+		    item = (Item)itemList.get(i);
+		    todoItems.add(item);
 		}
 	}
 	
-	// Save changes to the todo.txt file
-	private void writeItems() {
-		File filesDir = getFilesDir();
-		File todoFile = new File(filesDir, "todo.txt");
-		try {
-			FileUtils.writeLines(todoFile, todoItems);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+	private void saveItem(String itemText) {
+		Item item = new Item();
+//		item.remoteId = automatically assigned
+		item.task = itemText;
+		item.save();
+		todoItems.add(item);
+	}
+	
+	private void deleteItem(Item itemToDelete) {
+//		Item item = Item.load(Item.class, itemToDelete.remoteId);
+//		item.delete();
+ 
+		// or this should work too
+		new Delete().from(Item.class)
+		   .where("remote_id = ?", itemToDelete.remoteId)
+		   .execute();
+	}
+	
+	private void updateItem(Item itemToUpdate) {
+		new Update(Item.class)
+		  .set("Task = ?", itemToUpdate.task)
+		  .where("remote_id = ?", itemToUpdate.remoteId)
+		  .execute();
 	}
 }

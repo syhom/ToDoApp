@@ -11,6 +11,7 @@ import android.widget.EditText;
 public class EditItemActivity extends Activity {
 	private EditText etEditItem;
 	private int positionOfSelectedItem;
+	private Item selectedItem;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -19,13 +20,13 @@ public class EditItemActivity extends Activity {
 		
 		// Get the message from the intent
 	    Intent intent = getIntent();
-	    String selectedItem = intent.getStringExtra("selected_item");
+	    selectedItem = (Item) intent.getSerializableExtra("selected_item");
 	    positionOfSelectedItem = intent.getIntExtra("position", -1);
 	    
 	    // Set the edit text field with the name of the selected item
 	    etEditItem = (EditText)findViewById(R.id.etEditItem);
-	    etEditItem.setText(selectedItem);
-	    etEditItem.setSelection(selectedItem.length());
+	    etEditItem.setText(selectedItem.task);
+	    etEditItem.setSelection(selectedItem.task.length());
 	}
 
 	@Override
@@ -53,7 +54,9 @@ public class EditItemActivity extends Activity {
 		Intent data = new Intent();
 		
 		// Pass relevant data back as a result
-		data.putExtra("edited_item", etEditItem.getText().toString());
+	//	data.putExtra("edited_item", etEditItem.getText().toString());
+		selectedItem.task = etEditItem.getText().toString();
+		data.putExtra("edited_item", (Item) selectedItem);
 		data.putExtra("item_position", positionOfSelectedItem);
 		
 		// Activity finished ok, return the data
